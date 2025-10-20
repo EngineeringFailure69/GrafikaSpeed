@@ -125,7 +125,7 @@ void CGLRenderer::DestroyScene(CDC *pDC)
 	}
 }
 
-UINT CGLRenderer::LoadTexture(char* fileName) 
+UINT CGLRenderer::LoadTexture(char* fileName)
 {
 	UINT texID;
 	DImage img;
@@ -138,9 +138,12 @@ UINT CGLRenderer::LoadTexture(char* fileName)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_PROXY_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
-	gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, img.Width(), img.Height(), GL_RGBA, GL_UNSIGNED_BYTE, img.GetDIBBits());
+	//gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, img.Width(), img.Height(), GL_RGBA, GL_UNSIGNED_BYTE, img.GetDIBBits());
+	gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, img.Width(), img.Height(), GL_BGRA_EXT, GL_UNSIGNED_BYTE, img.GetDIBBits());
+	//gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGB, img.Width(), img.Height(), GL_BGR_EXT, GL_UNSIGNED_BYTE, img.GetDIBBits());
+
 	return texID;
 }
 
@@ -266,6 +269,481 @@ void CGLRenderer::DrawEnvCube(double a)
 
 	glDisable(GL_TEXTURE_2D);
 }
+
+//Krug:
+
+void CGLRenderer::DrawCircle(float r, int n)
+{
+    glBegin(GL_LINE_LOOP); // ako hoćeš samo obod, za pun krug koristi GL_POLYGON
+    for (int i = 0; i < n; i++)
+    {
+        float theta = 2.0f * 3.14159265359f * float(i) / float(n); // ugao u radijanima
+        float x = r * cosf(theta);
+        float y = r * sinf(theta);
+        glVertex3f(x, y, 0.0f); // krug u XY ravni, Z=0
+    }
+    glEnd();
+}
+
+
+//Pravougaonik:
+
+void CGLRenderer::DrawRect(float a, float b, int n)
+{
+	float dx = a / n;   // korak po X osi
+	float dy = b / n;   // korak po Y osi
+	float dt = 1.0f / n; // korak po teksturi
+
+	glNormal3f(0, 0, 1); // sve normale u istom pravcu (Z+)
+
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			// Koordinate za poziciju
+			float x0 = -a / 2 + i * dx;
+			float y0 = -b / 2 + j * dy;
+			float x1 = x0 + dx;
+			float y1 = y0 + dy;
+
+			// Koordinate za teksturu
+			float s0 = i * dt;
+			float t0 = j * dt;
+			float s1 = s0 + dt;
+			float t1 = t0 + dt;
+
+			// Crtanje jednog podpravougaonika
+			glBegin(GL_QUADS);
+			glTexCoord2f(s0, t0); glVertex3f(x0, y0, 0);
+			glTexCoord2f(s1, t0); glVertex3f(x1, y0, 0);
+			glTexCoord2f(s1, t1); glVertex3f(x1, y1, 0);
+			glTexCoord2f(s0, t1); glVertex3f(x0, y1, 0);
+			glEnd();
+		}
+	}
+	//float dx = a / n;
+	//float dy = b / n;
+
+	//float txStep = 1.0f / n;
+	//float tyStep = 1.0f / n;
+
+	//glNormal3f(0, 0, 1); // Normalna za celu površinu (pravougaonik u XY ravni)
+
+	//for (int i = 0; i < n; i++)
+	//{
+	//	for (int j = 0; j < n; j++)
+	//	{
+	//		float x = -a / 2 + i * dx;
+	//		float y = -b / 2 + j * dy;
+
+	//		glBegin(GL_QUADS);
+	//		glTexCoord2f(i * txStep, j * tyStep);
+	//		glVertex3f(x, y, 0);
+
+	//		glTexCoord2f((i + 1) * txStep, j * tyStep);
+	//		glVertex3f(x + dx, y, 0);
+
+	//		glTexCoord2f((i + 1) * txStep, (j + 1) * tyStep);
+	//		glVertex3f(x + dx, y + dy, 0);
+
+	//		glTexCoord2f(i * txStep, (j + 1) * tyStep);
+	//		glVertex3f(x, y + dy, 0);
+	//		glEnd();
+	//	}
+	//}
+}
+
+
+
+//Kvadrat:
+
+void CGLRenderer::DrawSquare(float a, int n) 
+{
+	// duzina jedne celije
+	float step = a / n;
+
+	// normalni vektor za ceo kvadrat
+	glNormal3f(0, 0, 1);
+
+	// centriramo kvadrat oko koordinatnog pocetka
+	float start = -a / 2.0f;
+
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			float x0 = start + i * step;
+			float y0 = start + j * step;
+			float x1 = x0 + step;
+			float y1 = y0 + step;
+
+			// Teksturne koordinate se normalizuju na [0,1]
+			float s0 = (float)i / n;
+			float t0 = (float)j / n;
+			float s1 = (float)(i + 1) / n;
+			float t1 = (float)(j + 1) / n;
+
+			glBegin(GL_QUADS);
+			glTexCoord2f(s0, t0); glVertex3f(x0, y0, 0);
+			glTexCoord2f(s1, t0); glVertex3f(x1, y0, 0);
+			glTexCoord2f(s1, t1); glVertex3f(x1, y1, 0);
+			glTexCoord2f(s0, t1); glVertex3f(x0, y1, 0);
+			glEnd();
+		}
+	}
+}
+
+
+//Prizma sastavljena od pravougaonika iz DrawRect i sa teksturom zalepljenom na jednu stranu
+
+void CGLRenderer::DrawPrism(float a, float b, float c, int n, bool drawRight) 
+{
+	//float A = a / 2.0f;
+	//float B = b / 2.0f;
+	//float C = c / 2.0f;
+
+	//// Prednja strana
+	//glPushMatrix();
+	//glTranslatef(0, 0, C);
+	//glNormal3f(0, 0, 1);
+	//DrawRect(a, b, n);
+	//glPopMatrix();
+
+	//// Zadnja strana
+	//glPushMatrix();
+	//glTranslatef(0, 0, -C);
+	//glRotatef(180, 0, 1, 0);
+	//glNormal3f(0, 0, -1);
+	//DrawRect(a, b, n);
+	//glPopMatrix();
+
+	//// Gornja strana
+	//glPushMatrix();
+	//glTranslatef(0, B, 0);
+	//glRotatef(-90, 1, 0, 0);
+	//glNormal3f(0, 1, 0);
+	//DrawRect(a, c, n);
+	//glPopMatrix();
+
+	//// Donja strana
+	//glPushMatrix();
+	//glTranslatef(0, -B, 0);
+	//glRotatef(90, 1, 0, 0);
+	//glNormal3f(0, -1, 0);
+	//DrawRect(a, c, n);
+	//glPopMatrix();
+
+	//// Leva strana
+	//glPushMatrix();
+	//glTranslatef(-A, 0, 0);
+	//glRotatef(90, 0, 1, 0);
+	//glNormal3f(-1, 0, 0);
+	//DrawRect(c, b, n);
+	//glPopMatrix();
+
+	//// Desna strana — samo ako se drawRight == true
+	//if (drawRight)
+	//{
+	//	glPushMatrix();
+	//	glTranslatef(A, 0, 0);
+	//	glRotatef(-90, 0, 1, 0);
+	//	glNormal3f(1, 0, 0);
+	//	DrawRect(c, b, n);
+	//	glPopMatrix();
+	//}
+
+	float A = a / 2.0f;
+	float B = b / 2.0f;
+	float C = c / 2.0f;
+
+	// --- Prednja strana (sa teksturom) ---
+	glPushMatrix();
+	glTranslatef(0, 0, C);
+	glNormal3f(0, 0, 1);
+
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, ship);   // tvoj ID teksture
+	glColor3d(1.0, 1.0, 1.0);
+	DrawRect(a, b, n);
+	glDisable(GL_TEXTURE_2D);
+
+	glPopMatrix();
+
+	// --- Zadnja strana (bez teksture) ---
+	glPushMatrix();
+	glTranslatef(0, 0, -C);
+	glRotatef(180, 0, 1, 0);
+	glNormal3f(0, 0, -1);
+	glColor3f(0.6f, 0.6f, 0.6f); // siva boja
+	DrawRect(a, b, n);
+	glPopMatrix();
+
+	// --- Gornja ---
+	glPushMatrix();
+	glTranslatef(0, B, 0);
+	glRotatef(-90, 1, 0, 0);
+	glNormal3f(0, 1, 0);
+	glColor3f(0.8f, 0.8f, 0.8f);
+	DrawRect(a, c, n);
+	glPopMatrix();
+
+	// --- Donja ---
+	glPushMatrix();
+	glTranslatef(0, -B, 0);
+	glRotatef(90, 1, 0, 0);
+	glNormal3f(0, -1, 0);
+	glColor3f(0.8f, 0.8f, 0.8f);
+	DrawRect(a, c, n);
+	glPopMatrix();
+
+	// --- Leva ---
+	glPushMatrix();
+	glTranslatef(-A, 0, 0);
+	glRotatef(90, 0, 1, 0);
+	glNormal3f(-1, 0, 0);
+	glColor3f(0.7f, 0.7f, 0.7f);
+	DrawRect(c, b, n);
+	glPopMatrix();
+
+	// --- Desna (ako treba) ---
+	if (drawRight)
+	{
+		glPushMatrix();
+		glTranslatef(A, 0, 0);
+		glRotatef(-90, 0, 1, 0);
+		glNormal3f(1, 0, 0);
+		glColor3f(0.7f, 0.7f, 0.7f);
+		DrawRect(c, b, n);
+		glPopMatrix();
+	}
+}
+
+
+//Obicna prizma sa teksturom na jednoj stranici, prednjoj
+
+void CGLRenderer::DrawPrism(float a, float b, float c, int n)
+{
+	// koraci po svakoj osi
+	//float dx = a / n;
+	//float dy = b / n;
+	//float dz = c / n;
+
+	//// centriramo prizmu oko koordinatnog početka
+	//float x0 = -a / 2.0f;
+	//float y0 = -b / 2.0f;
+	//float z0 = -c / 2.0f;
+	////glColor3d(1.0, 1.0, 1.0);
+	//// gornja i donja površina (XY ravnina)
+	//for (int i = 0; i < n; i++)
+	//{
+	//	for (int j = 0; j < n; j++)
+	//	{
+	//		float x1 = x0 + i * dx;
+	//		float y1 = y0 + j * dy;
+	//		float x2 = x1 + dx;
+	//		float y2 = y1 + dy;
+
+	//		// donja površina Z = z0
+	//		glNormal3f(0, 0, -1);
+	//		glBegin(GL_QUADS);
+	//		glVertex3f(x1, y1, z0);
+	//		glVertex3f(x2, y1, z0);
+	//		glVertex3f(x2, y2, z0);
+	//		glVertex3f(x1, y2, z0);
+	//		glEnd();
+
+	//		// gornja površina Z = z0 + c
+	//		glNormal3f(0, 0, 1);
+	//		glBegin(GL_QUADS);
+	//		glVertex3f(x1, y1, z0 + c);
+	//		glVertex3f(x2, y1, z0 + c);
+	//		glVertex3f(x2, y2, z0 + c);
+	//		glVertex3f(x1, y2, z0 + c);
+	//		glEnd();
+	//	}
+	//}
+
+	//// prednja i zadnja površina (XZ ravnina)
+	//for (int i = 0; i < n; i++)
+	//{
+	//	for (int j = 0; j < n; j++)
+	//	{
+	//		float x1 = x0 + i * dx;
+	//		float z1 = z0 + j * dz;
+	//		float x2 = x1 + dx;
+	//		float z2 = z1 + dz;
+
+	//		// prednja površina Y = y0 + b/2
+	//		glNormal3f(0, 1, 0);
+	//		glBegin(GL_QUADS);
+	//		glVertex3f(x1, y0 + b, z1);
+	//		glVertex3f(x2, y0 + b, z1);
+	//		glVertex3f(x2, y0 + b, z2);
+	//		glVertex3f(x1, y0 + b, z2);
+	//		glEnd();
+
+	//		// zadnja površina Y = y0
+	//		glNormal3f(0, -1, 0);
+	//		glBegin(GL_QUADS);
+	//		glVertex3f(x1, y0, z1);
+	//		glVertex3f(x2, y0, z1);
+	//		glVertex3f(x2, y0, z2);
+	//		glVertex3f(x1, y0, z2);
+	//		glEnd();
+	//	}
+	//}
+
+	//// leva i desna površina (YZ ravnina)
+	//for (int i = 0; i < n; i++)
+	//{
+	//	for (int j = 0; j < n; j++)
+	//	{
+	//		float y1 = y0 + i * dy;
+	//		float z1 = z0 + j * dz;
+	//		float y2 = y1 + dy;
+	//		float z2 = z1 + dz;
+
+	//		// desna površina X = x0 + a
+	//		glNormal3f(1, 0, 0);
+	//		glBegin(GL_QUADS);
+	//		glVertex3f(x0 + a, y1, z1);
+	//		glVertex3f(x0 + a, y2, z1);
+	//		glVertex3f(x0 + a, y2, z2);
+	//		glVertex3f(x0 + a, y1, z2);
+	//		glEnd();
+
+	//		// leva površina X = x0
+	//		glNormal3f(-1, 0, 0);
+	//		glBegin(GL_QUADS);
+	//		glVertex3f(x0, y1, z1);
+	//		glVertex3f(x0, y2, z1);
+	//		glVertex3f(x0, y2, z2);
+	//		glVertex3f(x0, y1, z2);
+	//		glEnd();
+	//	}
+	//}
+	float dx = a / n;
+	float dy = b / n;
+	float dz = c / n;
+
+	float xStart = -a / 2.0f;
+	float yStart = 0.0f;
+	float zStart = -c / 2.0f;
+
+	// ************** Prednja stranica sa teksturom **************
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, ship);
+	glColor3d(1.0, 1.0, 1.0);
+
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			float x0 = xStart + i * dx;
+			float x1 = xStart + (i + 1) * dx;
+			float y0 = yStart + j * dy;
+			float y1 = yStart + (j + 1) * dy;
+
+			float s0 = (float)i / n;
+			float s1 = (float)(i + 1) / n;
+			float t0 = (float)j / n;
+			float t1 = (float)(j + 1) / n;
+
+			glBegin(GL_QUADS);
+			glNormal3f(0, 0, 1); // normalna ka napred
+			glTexCoord2f(s0, t0); glVertex3f(x0, y0, c / 2);
+			glTexCoord2f(s1, t0); glVertex3f(x1, y0, c / 2);
+			glTexCoord2f(s1, t1); glVertex3f(x1, y1, c / 2);
+			glTexCoord2f(s0, t1); glVertex3f(x0, y1, c / 2);
+			glEnd();
+		}
+	}
+
+	//glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_TEXTURE_2D);
+
+	// ************** Donja stranica **************
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			float x0 = xStart + i * dx;
+			float x1 = xStart + (i + 1) * dx;
+			float z0 = zStart + j * dz;
+			float z1 = zStart + (j + 1) * dz;
+
+			glBegin(GL_QUADS);
+			glNormal3f(0, -1, 0);
+			glVertex3f(x0, yStart, z0);
+			glVertex3f(x1, yStart, z0);
+			glVertex3f(x1, yStart, z1);
+			glVertex3f(x0, yStart, z1);
+			glEnd();
+		}
+	}
+
+	// ************** Gornja stranica **************
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			float x0 = xStart + i * dx;
+			float x1 = xStart + (i + 1) * dx;
+			float z0 = zStart + j * dz;
+			float z1 = zStart + (j + 1) * dz;
+
+			glBegin(GL_QUADS);
+			glNormal3f(0, 1, 0);
+			glVertex3f(x0, yStart + b, z0);
+			glVertex3f(x1, yStart + b, z0);
+			glVertex3f(x1, yStart + b, z1);
+			glVertex3f(x0, yStart + b, z1);
+			glEnd();
+		}
+	}
+
+	// ************** Ostale 4 strane **************
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			float x0 = xStart + i * dx;
+			float x1 = xStart + (i + 1) * dx;
+			float y0 = yStart + j * dy;
+			float y1 = yStart + (j + 1) * dy;
+			float z0 = zStart;
+			float z1 = zStart + c;
+
+			// Leva
+			glBegin(GL_QUADS);
+			glNormal3f(-1, 0, 0);
+			glVertex3f(xStart, y0, z0);
+			glVertex3f(xStart, y1, z0);
+			glVertex3f(xStart, y1, z1);
+			glVertex3f(xStart, y0, z1);
+			glEnd();
+
+			// Desna
+			glBegin(GL_QUADS);
+			glNormal3f(1, 0, 0);
+			glVertex3f(xStart + a, y0, z0);
+			glVertex3f(xStart + a, y1, z0);
+			glVertex3f(xStart + a, y1, z1);
+			glVertex3f(xStart + a, y0, z1);
+			glEnd();
+
+			// Zadnja
+			glBegin(GL_QUADS);
+			glNormal3f(0, 0, -1);
+			glVertex3f(x0, y0, -c / 2);
+			glVertex3f(x1, y0, -c / 2);
+			glVertex3f(x1, y1, -c / 2);
+			glVertex3f(x0, y1, -c / 2);
+			glEnd();
+		}
+	}
+}
+
 
 //Piramida
 
