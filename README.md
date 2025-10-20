@@ -1,3 +1,7 @@
+#define PI 3.14
+#define toRad PI / 180
+#define toDeg 180 / PI
+
 OpenGL:
 
 Osvetjenje i tako to:
